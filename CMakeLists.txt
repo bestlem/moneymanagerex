@@ -307,6 +307,15 @@ ENDIF()
 ## Subdirectories with targets ##
 ADD_SUBDIRECTORY(3rd)
 ADD_SUBDIRECTORY(po)
+#Resources which are needed by the executable to run
+SET(html_resources
+    3rd/ChartNew.js/ChartNew.js
+    3rd/sorttable.js/sorttable.js
+    resources/home_page.htt
+    resources/kaching.wav
+    resources/master.css
+    )
+
 ADD_SUBDIRECTORY(src)
 IF(MMEX_BUILD_TESTS)
     IF(MSVC AND CMAKE_SIZEOF_VOID_P EQUAL 8)
@@ -322,22 +331,8 @@ ENDIF()
 
 # --------- Install ---------
 # Before moving to INSTALL commands for macOS bundle this needs to be set
-IF(APPLE)
-    # Configure variables that are substituted into the plist
-    # https://cmake.org/cmake/help/latest/prop_tgt/MACOSX_BUNDLE_INFO_PLIST.html
+# but bundle should be part of build so some moved to src directory
 
-    SET_TARGET_PROPERTIES(${MMEX_EXE} PROPERTIES
-        # Set CFBundleName, which controls the application menu label
-        MACOSX_BUNDLE_BUNDLE_NAME ${MMEX_EXE}
-        # Set CFBundleVersion to the git describe output. Apple docs say it should be "three non-negative, period-separated integers with the first integer being greater than zero"
-        MACOSX_BUNDLE_BUNDLE_VERSION ${MMEX_VERSION}
-        # Set CFBundleExecutable
-        #MACOSX_BUNDLE_EXECUTABLE_NAME "${OUTPUT_NAME}"
-        # Set CFBundleShortVersionString to "2.0.0". This is displayed in the Finder and Spotlight.
-        MACOSX_BUNDLE_SHORT_VERSION_STRING ${MMEX_VERSION}
-        # Set the path to the plist template
-        MACOSX_BUNDLE_INFO_PLIST "${PROJECT_SOURCE_DIR}/resources/Info.plist")
-ENDIF()
 
 IF(WIN32)
     IF(MMEX_PORTABLE_INSTALL)
@@ -436,15 +431,12 @@ INSTALL(FILES
     resources/master.css
     DESTINATION "${MMEX_DOC_DIR}/help")
 
-# Resources
-INSTALL(FILES
-    3rd/ChartNew.js/ChartNew.js
-    3rd/sorttable.js/sorttable.js
-    resources/home_page.htt
-    resources/kaching.wav
-    resources/master.css
-    DESTINATION "${MMEX_RES_DIR}")
-
+# Resources - Apple is in build
+if(NOT APPLE)
+    INSTALL(FILES
+        html_resources
+        DESTINATION "${MMEX_RES_DIR}")
+ENDIF()
 IF(LINUX)
     # .desktop File
     INSTALL(FILES
@@ -458,9 +450,7 @@ IF(LINUX)
         resources/mmex.svg
         DESTINATION share/icons/hicolor/scalable/apps)
 ELSEIF(APPLE)
-    INSTALL(FILES
-        "${MACOSX_APP_ICON_FILE}"
-        DESTINATION "${MMEX_RES_DIR}")
+    # Done in build
 ELSEIF(WIN32)
     INSTALL(FILES
         resources/mmex.ico

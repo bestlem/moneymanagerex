@@ -39,12 +39,18 @@ FOREACH(POFile ${POFiles})
         set(MODir share/${MMEX_EXE}/${CurrentFile})
     #    set(MODir share/locale/${CurrentFile}/LC_MESSAGES)
     ENDIF()
+
     INSTALL(FILES "${CMAKE_CURRENT_BINARY_DIR}/${CurrentFile}.mo"
         DESTINATION ${MODir}
         RENAME ${MMEX_EXE}.mo)
 
     LIST(APPEND MOFiles "${CMAKE_CURRENT_BINARY_DIR}/${CurrentFile}.mo")
+
+    LIST(APPEND TranslationNamesList ${CurrentFile})
 ENDFOREACH()
 
+#SET(TranslationNames TranslationNamesList PARENT_SCOPE )
+#SET(TranslationMoDir "${CMAKE_CURRENT_BINARY_DIR}" PARENT_SCOPE )
+SET(TranslationMOFiles "${MOFiles}" PARENT_SCOPE )
 ADD_CUSTOM_TARGET(Translations ALL DEPENDS ${MOFiles}
     COMMENT "Generated translations")

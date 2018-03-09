@@ -281,11 +281,62 @@ ADD_LIBRARY(MMEXLib STATIC EXCLUDE_FROM_ALL
     "${CMAKE_CURRENT_BINARY_DIR}/versions.h"
     "${MMEX_PLAT_DIR}/platfdep.cpp")
 
+if(APPLE)
+    foreach( r ${html_resources})
+        LIST(APPEND MACOS_APP_RESOURCE_FILES "../${r}")
+    ENDFOREACH()
+    LIST(APPEND MACOS_APP_RESOURCE_FILES "${MACOSX_APP_ICON_FILE}")
+    foreach(MOSrc ${TranslationMOFiles} )
+        GET_FILENAME_COMPONENT(MOName "${MOSrc}" NAME_WE)
+        SET_SOURCE_FILES_PROPERTIES($MOSrc PROPERTIES GENERATED TRUE)
+    ENDFOREACH()
+ENDIF()
+
 ADD_EXECUTABLE(${MMEX_EXE} WIN32 MACOSX_BUNDLE
     mmex.cpp
     mmex.h
-    "${MACOSX_APP_ICON_FILE}"
-    "${MMEX_RC}")
+    "${MMEX_RC}"
+    "${MACOS_APP_RESOURCE_FILES}"
+    )
+
+IF(APPLE)
+    # Configure variables that are substituted into the plist
+    # https://cmake.org/cmake/help/latest/prop_tgt/MACOSX_BUNDLE_INFO_PLIST.html
+
+    SET_TARGET_PROPERTIES(${MMEX_EXE} PROPERTIES
+        # Set CFBundleName, which controls the application menu label
+        MACOSX_BUNDLE_BUNDLE_NAME ${MMEX_EXE}
+        # Set CFBundleVersion to the git describe output. Apple docs say it should be "three non-negative, period-separated integers with the first integer being greater than zero"
+        MACOSX_BUNDLE_BUNDLE_VERSION ${MMEX_VERSION}
+        # Set CFBundleExecutable
+        #MACOSX_BUNDLE_EXECUTABLE_NAME "${OUTPUT_NAME}"
+        # Set CFBundleShortVersionString to "2.0.0". This is displayed in the Finder and Spotlight.
+        MACOSX_BUNDLE_SHORT_VERSION_STRING ${MMEX_VERSION}
+        # Set the path to the plist template
+        MACOSX_BUNDLE_INFO_PLIST "${PROJECT_SOURCE_DIR}/resources/Info.plist"
+        #Icon also in depends
+        MACOSX_BUNDLE_ICON_FILE "${MACOSX_APP_ICON_FILE}"
+        )
+ENDIF()
+
+# Add the translatiomns from generated en_GB.mo fo en_GB.lproj/mmex.mo in Resources of bundle
+# Can't generate correct Xcode file as Cmake does not suppor directories in RESOURCE.
+#Use of $<TARGET_BUNDLE_DIR:${MMEX_EXE}> is because Xcode generator puts .app in a different place.
+ADD_DEPENDENCIES(${MMEX_EXE} Translations)
+FOREACH(MOSrc ${TranslationMOFiles} )
+    GET_FILENAME_COMPONENT(MOName "${MOSrc}" NAME_WE)
+    SET(MOTargetDir "${MMEX_RESOURCE_DIR}/${MOName}.lproj")
+    ADD_CUSTOM_COMMAND(TARGET ${MMEX_EXE} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E make_directory "$<TARGET_BUNDLE_DIR:${MMEX_EXE}>/Contents/Resources/${MOName}.lproj"
+        COMMAND ${CMAKE_COMMAND} -E copy "${MOSrc}" "$<TARGET_BUNDLE_DIR:${MMEX_EXE}>/Contents/Resources/${MOName}.lproj/mmex.mo"
+    )
+ENDFOREACH()
+
+
+#Icon and html Resources
+SET_TARGET_PROPERTIES(${MMEX_EXE} PROPERTIES
+        RESOURCE "${MACOS_APP_RESOURCE_FILES}"
+    )
 
 IF(CMAKE_VERSION VERSION_LESS 3.1)
     INCLUDE(CheckCXXCompilerFlag)
